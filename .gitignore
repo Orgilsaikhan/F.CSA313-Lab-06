@@ -1,0 +1,11 @@
+# PICT source / build (repo-с гадна ~/tools/pict-д бүтээсэн)
+pict/
+build/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Assignment handout (do not commit)
+*.docx
