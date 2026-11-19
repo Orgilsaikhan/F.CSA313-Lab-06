@@ -1,0 +1,10 @@
+# Lab 06 — POST /transfer, [ERROR] утгуудыг ~ (negative) болгосон
+From:      Valid, ~Frozen, ~Missing
+To:        Valid, ~Missing, ~SameAsFrom
+Amount:    Normal, ~Zero, ~OverBalance, ~OverLimit
+Currency:  Same, Different
+DailyUsed: None, Partial
+
+# [IF FROM_EXISTS] — ~ нь алдааны хослолыг (masking) шийддэг ч "утгагүй" хослолыг шийддэггүй тул хэвээр.
+# Amount-ын хэсэг энд илүүц: ~Missing мөрөнд Amount заавал цорын ганц эерэг утга Normal болно.
+IF [From] = "Missing" THEN [Currency] = "Same" AND [DailyUsed] = "None";

@@ -1,0 +1,10 @@
+# Lab 06 — POST /transfer, A2-ын [IF] хязгаарлалттай
+From:      Valid, Frozen, Missing
+To:        Valid, Missing, SameAsFrom
+Amount:    Zero, Normal, OverBalance, OverLimit
+Currency:  Same, Different
+DailyUsed: None, Partial
+
+# [IF FROM_EXISTS] — байхгүй дансанд үлдэгдэл, лимит, валют, өнөөдрийн хэрэглээ гэж байхгүй.
+# OverBalance / OverLimit утгагүй; Currency, DailyUsed-ийг "хамаагүй" нэг утгад түгжинэ.
+IF [From] = "Missing" THEN [Amount] IN {"Zero", "Normal"} AND [Currency] = "Same" AND [DailyUsed] = "None";

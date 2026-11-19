@@ -1,0 +1,7 @@
+# Lab 06 — POST /transfer, хязгаарлалтгүй (no constraints)
+# Хэсэг A-гийн C1, C2, C3–C5 (amount нэг параметр болгож нэгтгэсэн), C6, C7
+From:      Valid, Frozen, Missing
+To:        Valid, Missing, SameAsFrom
+Amount:    Zero, Normal, OverBalance, OverLimit
+Currency:  Same, Different
+DailyUsed: None, Partial

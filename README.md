@@ -156,3 +156,80 @@ ERROR_NO_FROM → ERROR_FROZEN → ERROR_NO_TO → ERROR_SAME_ACCOUNT → ERROR_
 **Сонирхолтой нь S14 ба S15:** S14-д нэрлэсэн дүн `200` нь үлдэгдэл `500,000`-аас хамаагүй бага мэт харагдах ч хөрвүүлсний дараа хэтэрдэг, S15-д эсрэгээрээ нэрлэсэн `300,000` нь `100` USD үлдэгдлээс "их" мэт боловч хөрвүүлбэл багтана. Хөрвүүлэлтээс өмнө харьцуулдаг алдаатай хэрэгжүүлэлтийг эдгээр хоёр л барина.
 
 **Давхар нөхцөл:** S16, S18 нь `from` → `to` → `amount` эрэмбийг, S17 нь `amount` доторх `INSUFFICIENT` → `LIMIT` эрэмбийг бэхжүүлнэ — хэрэгжүүлэлт өөр эрэмбээр шалгавал API-гийн хэрэглэгч өөр алдааны код хардаг тул эдгээр тест унах ёстой.
+
+---
+
+## Хэсэг B: PICT — pairwise covering array
+
+Бүх ажиллуулалт PICT-ийн анхдагч горимоор (`/r` санамсаргүй seed ашиглаагүй) — дахин ажиллуулахад яг ижил гаралт гарна. Мөрийн тоог `tail -n +2 <файл> | wc -l`-ээр (эхний мөр нь толгой) тоолсон.
+
+### B1 — Лекцийн браузерын жишээ
+
+`browser.model` — зааврынхаар:
+
+```
+Content:   Allow, Restrict, Block
+Cookies:   Allow, Restrict, Block
+Popups:    Yes, No
+Addons:    Yes, No
+Attacks:   Yes, No
+Forgeries: Yes, No
+```
+
+```bash
+pict browser.model | tee results/browser-2way.txt
+pict browser.model /o:3 > results/browser-3way.txt
+tail -n +2 results/browser-2way.txt | wc -l    # 10
+tail -n +2 results/browser-3way.txt | wc -l    # 20
+```
+
+| Ажиллуулалт | Файл | Мөр | Хамрах ёстой хослол (`/s`) | Онолын доод хязгаар | Бүрэн олонлог |
+|---|---|---|---|---|---|
+| 2-way (анхдагч) | `results/browser-2way.txt` | **10** | 81 хос | 3 × 3 = 9 | 144 |
+| 3-way (`/o:3`) | `results/browser-3way.txt` | **20** | 248 гурвал | 3 × 3 × 2 = 18 | 144 |
+
+`/s` (статистик)-ийн гаралт `results/browser-stats.txt`-д. Бүрэн олонлог = 3 × 3 × 2 × 2 × 2 × 2 = **144**.
+
+### B2 — Шилжүүлгийн модель
+
+Хэсэг A-гийн сонголтуудыг PICT-ийн 5 параметр болгож буулгасан: C1 → `From`, C2 → `To`, C3–C5 → `Amount` (тэмдэг, үлдэгдэл, лимитийг нэг параметрт), C6 → `Currency`, далд орчны C7 → `DailyUsed`.
+
+| Файл | Юугаараа ялгаатай |
+|---|---|
+| `transfer-nc.model` | Хязгаарлалтгүй |
+| `transfer.model` | A2-ын **[IF FROM_EXISTS]** хязгаарлалт: `From = Missing` бол `Amount ∈ {Zero, Normal}`, `Currency = Same`, `DailyUsed = None` |
+| `transfer-neg.model` | A2-ын **[ERROR]** утгууд `~`-тэй + [IF FROM_EXISTS] (`Currency`, `DailyUsed`-ийн хэсэг) |
+| `transfer-neg-noif.model` | Харьцуулалтад: `transfer-neg.model`-оос IF хязгаарлалтыг хассан |
+
+`transfer.model`-ийн хязгаарлалт:
+
+```
+IF [From] = "Missing" THEN [Amount] IN {"Zero", "Normal"} AND [Currency] = "Same" AND [DailyUsed] = "None";
+```
+
+Зааврын жишээний `IF [To] = "Missing" THEN [Amount] = "Normal"`-ийг оруулаагүй: `to` байхгүй байсан ч `from`-ийн үлдэгдэл, лимит байгаа тул `OverBalance` утга утгагүй болохгүй — энэ нь A2-ын IF биш, алдаа алдаагаа далдлах (masking) асуудал бөгөөд үүнийг `~` шийднэ. `Missing` дансны `Currency`, `DailyUsed`-д "хамаагүй" гэсэн утга байхгүй тул `Same`, `None`-д түгжсэн (PICT-ийн баримт бичгийн "dummy value technique"-ийн хялбар хувилбар).
+
+PICT модельд **оруулаагүй** зүйлс: [SINGLE] утгууд (C2 царцаагдсан `to`, C4/C5 яг тэнцүү) — PICT-д "нэг л удаа" гэсэн тэмдэглэгээ байхгүй; C3 сөрөг (`Zero`-той ижил анги); C8 ханшийн чиглэл (`Currency = Different` дотор). Эдгээрийг гараар хийсэн A3-ын S7, S10–S15 хамарна.
+
+```bash
+pict transfer-nc.model       > results/transfer-nc.txt
+pict transfer.model          > results/transfer.txt
+pict transfer-neg.model      > results/transfer-neg.txt
+pict transfer-neg-noif.model > results/transfer-neg-noif.txt
+```
+
+#### Гурван хувилбарын харьцуулалт
+
+"Алдаа" = `From ∈ {Frozen, Missing}`, `To ∈ {Missing, SameAsFrom}`, `Amount ∈ {Zero, OverBalance, OverLimit}` тус бүр 1. "Утгагүй мөр" = `From = Missing` байхад `Amount ∈ {OverBalance, OverLimit}`, `Currency = Different` эсвэл `DailyUsed = Partial`. Мөрийн дугаар нь файлын мөр (толгой = 1-р мөр, `sed -n 'Np'`).
+
+| Хувилбар | Мөр | Happy path мөр | Нэг мөр дэх алдаа (макс) | Алдааны тоогоор мөр (0 / 1 / 2 / 3) | Утгагүй мөр |
+|---|---|---|---|---|---|
+| `results/transfer-nc.txt` | **14** | 1 (мөр 14) | **3** | 1 / 2 / 7 / 4 | 3 (мөр 3, 8, 11) |
+| `results/transfer.txt` | **14** | **0** | **3** | 0 / 3 / 7 / 4 | 0 |
+| `results/transfer-neg.txt` | **18** | 4 (мөр 2–5) | **1** | 4 / 14 / 0 / 0 | 0 |
+| `results/transfer-neg-noif.txt` | 18 | 4 (мөр 2–5) | 1 | 4 / 14 / 0 / 0 | 2 (мөр 12, 18) |
+
+- **Happy path:** `transfer-nc.txt`-д ганц (`Valid Valid Normal Different None`), харин `transfer.txt`-д **нэг ч алга** — хязгаарлалт нэмснээр PICT мөрүүдийг өөрөөр баглаж, бүх утга хүчинтэй мөр санамсаргүйгээр алга болсон. Pairwise нь "бүх утга хүчинтэй" хослолыг огт баталгаажуулдаггүй гэсэн үг.
+- **Олон алдаа:** nc ба IF хувилбарт 14 мөрийн 11 нь 2–3 алдаатай. Жишээ нь `transfer.txt`-ийн 10-р мөр `Frozen SameAsFrom OverBalance Same Partial` — давуу эрэмбээр сервер `ERROR_FROZEN` буцаагаад `SameAsFrom`, `OverBalance`-ийг огт шалгахгүй. Цаасан дээр "хамрагдсан" `(SameAsFrom, OverBalance)` хос үнэндээ шалгагдаагүй — энэ бол error masking.
+- **Утгагүй мөр:** `transfer-nc.txt`-ийн 3, 8, 11-р мөрөнд байхгүй данс `Different` валют, `Partial` хэрэглээтэй — A2-ын IF хязгаарлалт эдгээрийг арилгасан (`transfer.txt`-д 0).
+- **`~` хувилбар:** мөр бүрд хамгийн ихдээ 1 алдаа, 4 мөр бүрэн хүчинтэй — алдааны мөр бүр яг нэг алдааны ангийг шалгадаг тул oracle нь эрэмбээс хамаарахгүй.

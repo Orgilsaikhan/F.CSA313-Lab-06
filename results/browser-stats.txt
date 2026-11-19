@@ -1,0 +1,9 @@
+$ pict browser.model /s
+Combinations:   81
+Generated tests:10
+Generation time:0:00:00
+
+$ pict browser.model /o:3 /s
+Combinations:   248
+Generated tests:20
+Generation time:0:00:00

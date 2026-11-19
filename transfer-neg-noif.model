@@ -1,0 +1,6 @@
+# Lab 06 — transfer-neg.model-ийн [IF] хязгаарлалтгүй хувилбар (харьцуулалтад)
+From:      Valid, ~Frozen, ~Missing
+To:        Valid, ~Missing, ~SameAsFrom
+Amount:    Normal, ~Zero, ~OverBalance, ~OverLimit
+Currency:  Same, Different
+DailyUsed: None, Partial
